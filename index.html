@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinterest Pin Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;900&family=Oswald:wght@700&family=Montserrat:wght@900&family=Anton&family=Bebas+Neue&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #111827; /* bg-gray-900 */
+        }
+        .canvas-container {
+            aspect-ratio: 9 / 16;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+        /* Custom Radio Buttons */
+        .layout-selector input:checked + label {
+            background-color: #8B5CF6; /* violet-500 */
+            color: white;
+            border-color: #7C3AED; /* violet-600 */
+        }
+        .star-btn.saved {
+            color: #FBBF24; /* yellow-400 */
+        }
+        /* Custom Color Picker */
+        .color-picker-input {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 40px;
+            height: 40px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        .color-picker-input::-webkit-color-swatch {
+            border-radius: 50%;
+            border: 2px solid #4B5563; /* gray-600 */
+        }
+        .color-picker-input::-moz-color-swatch {
+            border-radius: 50%;
+            border: 2px solid #4B5563; /* gray-600 */
+        }
+    </style>
+</head>
+<body class="text-gray-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-6xl mx-auto">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-black text-white" style="font-family: 'Anton', sans-serif;">Pinterest Pin Generator</h1>
+            <p class="text-gray-400 mt-2">Create stunning 2 or 4 image collage pins.</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-8 lg:gap-12">
+
+            <!-- Controls Panel -->
+            <div class="w-full lg:w-1/3 bg-gray-800 p-6 rounded-2xl shadow-lg flex flex-col">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-3">
+                    <h2 class="text-2xl font-bold text-white">Customize Your Pin</h2>
+                    <button id="savePrefsBtn" class="star-btn text-gray-400 hover:text-yellow-400 transition-colors" title="Save Preferences">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                    </button>
+                </div>
+                
+                <!-- Layout Selector -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold mb-2">Layout</label>
+                    <div class="layout-selector grid grid-cols-2 gap-2 rounded-lg bg-gray-700 p-1">
+                        <input type="radio" name="layout" id="layout-2" value="2-grid" class="sr-only" checked>
+                        <label for="layout-2" class="text-center cursor-pointer py-2 px-4 rounded-md transition-colors border-2 border-transparent">2 Images</label>
+                        
+                        <input type="radio" name="layout" id="layout-4" value="4-grid" class="sr-only">
+                        <label for="layout-4" class="text-center cursor-pointer py-2 px-4 rounded-md transition-colors border-2 border-transparent">4 Images</label>
+                    </div>
+                </div>
+
+                <!-- Image Upload -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold mb-2">Images</label>
+                    <input type="file" id="imageInput" accept="image/*" multiple class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-900/50 file:text-violet-300 hover:file:bg-violet-900">
+                </div>
+
+                <!-- Text & Font Controls -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-bold mb-2" for="pinText">Bolt Text</label>
+                        <input type="text" id="pinText" placeholder="Your Text" value="SUMMER VIBES" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2" for="fontSelector">Font</label>
+                        <select id="fontSelector" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"></select>
+                    </div>
+                </div>
+
+                <!-- Color Palette -->
+                <div class="mb-6">
+                    <label class="block text-sm font-bold mb-2">Theme Color</label>
+                    <div class="flex items-center gap-3">
+                        <div id="colorPalette" class="flex flex-wrap gap-3"></div>
+                        <button id="randomColorBtn" class="p-2 bg-gray-700 hover:bg-gray-600 rounded-full transition-transform hover:rotate-45" title="Randomize Colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M3 16v-4h4"></path><path d="M21 8V4h-4"></path></svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-xs font-bold mb-1" for="textColorPicker">Text</label>
+                            <input type="color" id="textColorPicker" class="color-picker-input">
+                        </div>
+                         <div>
+                            <label class="block text-xs font-bold mb-1" for="strokeColorPicker">Background</label>
+                            <input type="color" id="strokeColorPicker" class="color-picker-input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Text Design Selector -->
+                <div class="mb-8">
+                    <label class="block text-sm font-bold mb-2" for="textDesignSelector">Text Design</label>
+                    <select id="textDesignSelector" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500">
+                        <option value="solid-pro">Solid & Sharp</option>
+                        <option value="wave">Wave</option>
+                        <option value="staggered">Staggered</option>
+                        <option value="angled">Angled</option>
+                    </select>
+                </div>
+                
+                <!-- Download Button -->
+                <div class="mt-auto">
+                    <button id="downloadButton" class="w-full bg-violet-600 hover:bg-violet-700 text-white font-black py-3 px-4 rounded-lg flex items-center justify-center transition-transform hover:scale-105 shadow-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Download Pin (JPG)
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Canvas Preview -->
+            <div class="w-full lg:w-2/3 flex items-center justify-center">
+                <div id="canvas-container" class="canvas-container overflow-hidden bg-gray-700">
+                    <canvas id="pinCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const canvas = document.getElementById('pinCanvas');
+        const ctx = canvas.getContext('2d');
+        const imageInput = document.getElementById('imageInput');
+        const pinTextInput = document.getElementById('pinText');
+        const downloadButton = document.getElementById('downloadButton');
+        const colorPaletteContainer = document.getElementById('colorPalette');
+        const fontSelector = document.getElementById('fontSelector');
+        const randomColorBtn = document.getElementById('randomColorBtn');
+        const textDesignSelector = document.getElementById('textDesignSelector');
+        const layoutRadios = document.querySelectorAll('input[name="layout"]');
+        const savePrefsBtn = document.getElementById('savePrefsBtn');
+        const textColorPicker = document.getElementById('textColorPicker');
+        const strokeColorPicker = document.getElementById('strokeColorPicker');
+
+        // --- Configuration ---
+        const CANVAS_WIDTH = 1000;
+        const CANVAS_HEIGHT = 1778;
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        const fonts = ['Poppins', 'Anton', 'Bebas Neue', 'Oswald', 'Montserrat', 'Playfair Display'];
+        const colorPalettes = [
+            { name: 'Classic', text: '#FFFFFF', stroke: '#000000' },
+            { name: 'Navy & Gold', text: '#FFD700', stroke: '#000080' },
+            { name: 'Forest & Peach', text: '#FFDAB9', stroke: '#004225' },
+            { name: 'Maroon & Cream', text: '#FDF4E3', stroke: '#800000' },
+            { name: 'Teal & Pink', text: '#FADADD', stroke: '#0D7377' },
+        ];
+
+        let state = {
+            images: [],
+            layout: '2-grid',
+            text: pinTextInput.value,
+            fontFamily: fonts[0],
+            textColor: colorPalettes[0].text,
+            textStrokeColor: colorPalettes[0].stroke,
+            textDesign: 'solid-pro',
+        };
+
+        // --- Dragging State ---
+        let isDragging = false;
+        let dragTargetIndex = -1;
+        let startX, startY;
+        
+        // --- Layout Definitions ---
+        const GAP = 8;
+        const layouts = {
+            '2-grid': [
+                { x: 0, y: 0, width: CANVAS_WIDTH, height: (CANVAS_HEIGHT - GAP) / 2 },
+                { x: 0, y: (CANVAS_HEIGHT + GAP) / 2, width: CANVAS_WIDTH, height: (CANVAS_HEIGHT - GAP) / 2 },
+            ],
+            '4-grid': [
+                { x: 0, y: 0, width: (CANVAS_WIDTH - GAP) / 2, height: (CANVAS_HEIGHT - GAP) / 2 },
+                { x: (CANVAS_WIDTH + GAP) / 2, y: 0, width: (CANVAS_WIDTH - GAP) / 2, height: (CANVAS_HEIGHT - GAP) / 2 },
+                { x: 0, y: (CANVAS_HEIGHT + GAP) / 2, width: (CANVAS_WIDTH - GAP) / 2, height: (CANVAS_HEIGHT - GAP) / 2 },
+                { x: (CANVAS_WIDTH + GAP) / 2, y: (CANVAS_HEIGHT + GAP) / 2, width: (CANVAS_WIDTH - GAP) / 2, height: (CANVAS_HEIGHT - GAP) / 2 },
+            ]
+        };
+
+        // --- Utility Functions ---
+        function getFontWeight(fontFamily) { 
+            return ['Montserrat', 'Poppins', 'Playfair Display'].includes(fontFamily) ? '900' : '';
+        }
+        function wrapText(text, maxWidth, fontFamily, fontSize) {
+            const weight = getFontWeight(fontFamily);
+            ctx.font = `${weight} ${fontSize}px '${fontFamily}'`;
+            const words = text.toUpperCase().split(' ');
+            let lines = [], currentLine = words[0] || '';
+            for (let i = 1; i < words.length; i++) {
+                const testLine = currentLine + ' ' + words[i];
+                if (ctx.measureText(testLine).width > maxWidth) {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                } else { currentLine = testLine; }
+            }
+            lines.push(currentLine);
+            return lines;
+        }
+        function getFittedTextInfo(text, fontFamily, maxWidth) {
+            let fontSize = 150, lines = [];
+            while (fontSize > 10) {
+                lines = wrapText(text, maxWidth, fontFamily, fontSize);
+                if (lines.length <= 2) {
+                    const longestLine = lines.reduce((a, b) => ctx.measureText(a).width > ctx.measureText(b).width ? a : b, '');
+                    const weight = getFontWeight(fontFamily);
+                    ctx.font = `${weight} ${fontSize}px '${fontFamily}'`;
+                    if (ctx.measureText(longestLine).width <= maxWidth) return { lines, fontSize, longestLine };
+                }
+                fontSize--;
+            }
+            return { lines, fontSize, longestLine: lines[0] || '' };
+        }
+        function hexToRgb(hex) {
+            let r = 0, g = 0, b = 0;
+            if (hex.length == 4) {
+                r = "0x" + hex[1] + hex[1];
+                g = "0x" + hex[2] + hex[2];
+                b = "0x" + hex[3] + hex[3];
+            } else if (hex.length == 7) {
+                r = "0x" + hex[1] + hex[2];
+                g = "0x" + hex[3] + hex[4];
+                b = "0x" + hex[5] + hex[6];
+            }
+            return [parseInt(r), parseInt(g), parseInt(b)];
+        }
+        function getLuminance(hex) {
+            const rgb = hexToRgb(hex);
+            const [r, g, b] = rgb.map(c => {
+                c /= 255;
+                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+        function getContrast(hex1, hex2) {
+            const lum1 = getLuminance(hex1);
+            const lum2 = getLuminance(hex2);
+            const lighter = Math.max(lum1, lum2);
+            const darker = Math.min(lum1, lum2);
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+        function generateRandomHexColor() {
+            return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+        }
+        function sanitizeFilename(text) {
+            if (!text) {
+                return 'pinterest-pin';
+            }
+            return text
+                .toLowerCase()
+                .replace(/\s+/g, '-') // Replace spaces with -
+                .replace(/[^\w-]+/g, '') // Remove all non-word chars except -
+                .replace(/--+/g, '-') // Replace multiple - with single -
+                .replace(/^-+/, '') // Trim - from start of text
+                .replace(/-+$/, ''); // Trim - from end of text
+        }
+        
+        // --- Core Drawing Function ---
+        function drawCanvas() {
+            ctx.fillStyle = state.textStrokeColor;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            const currentLayout = layouts[state.layout];
+            currentLayout.forEach((rect, index) => {
+                const imageState = state.images[index];
+                drawImage(imageState, rect);
+            });
+
+            if (state.text) {
+                drawTextWithSelectedStyle();
+            }
+        }
+        
+        function drawTextWithSelectedStyle() {
+            const maxWidth = CANVAS_WIDTH - 60;
+            const { lines, fontSize, longestLine } = getFittedTextInfo(state.text, state.fontFamily, maxWidth);
+            const weight = getFontWeight(state.fontFamily);
+            ctx.font = `${weight} ${fontSize}px '${state.fontFamily}'`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const lineHeight = fontSize * 1.1;
+            const totalTextHeight = lines.length * lineHeight;
+            const startY = (CANVAS_HEIGHT / 2) - (totalTextHeight / 2) + (lineHeight / 2);
+
+            ctx.save();
+
+            switch (state.textDesign) {
+                case 'solid-pro':
+                    const padding = fontSize * 0.3;
+                    const bgWidth = ctx.measureText(longestLine).width + padding * 2;
+                    const bgHeight = totalTextHeight + padding;
+                    const bgX = (CANVAS_WIDTH / 2) - (bgWidth / 2);
+                    const bgY = (CANVAS_HEIGHT / 2) - (bgHeight / 2);
+                    ctx.fillStyle = state.textStrokeColor;
+                    ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
+                    ctx.strokeStyle = state.textColor;
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(bgX + 2, bgY + 2, bgWidth - 4, bgHeight - 4);
+                    lines.forEach((line, index) => {
+                        const yPos = startY + (index * lineHeight);
+                        ctx.fillStyle = state.textColor;
+                        ctx.fillText(line, CANVAS_WIDTH / 2, yPos);
+                    });
+                    break;
+                case 'wave':
+                    lines.forEach((line, index) => {
+                        const yPos = startY + (index * lineHeight);
+                        const waveOffset = Math.sin(index * 1.5 + 1) * (fontSize * 0.15);
+                        const textMetrics = ctx.measureText(line);
+                        const inlinePadding = fontSize * 0.2;
+                        const rectWidth = textMetrics.width + (inlinePadding * 2);
+                        const rectHeight = lineHeight;
+                        ctx.fillStyle = state.textStrokeColor;
+                        ctx.fillRect( (CANVAS_WIDTH / 2) - (rectWidth / 2) + waveOffset, yPos - (rectHeight / 2), rectWidth, rectHeight );
+                        ctx.fillStyle = state.textColor;
+                        ctx.fillText(line, (CANVAS_WIDTH / 2) + waveOffset, yPos);
+                    });
+                    break;
+                case 'staggered':
+                     lines.forEach((line, index) => {
+                        const yPos = startY + (index * lineHeight);
+                        const staggerOffset = (index % 2 === 0 ? -1 : 1) * (fontSize * 0.15);
+                        const textMetrics = ctx.measureText(line);
+                        const inlinePadding = fontSize * 0.2;
+                        const rectWidth = textMetrics.width + (inlinePadding * 2);
+                        const rectHeight = lineHeight;
+                        ctx.fillStyle = state.textStrokeColor;
+                        ctx.fillRect( (CANVAS_WIDTH / 2) - (rectWidth / 2) + staggerOffset, yPos - (rectHeight / 2), rectWidth, rectHeight );
+                        ctx.fillStyle = state.textColor;
+                        ctx.fillText(line, (CANVAS_WIDTH / 2) + staggerOffset, yPos);
+                    });
+                    break;
+                case 'angled':
+                    ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+                    ctx.rotate(-0.08); // ~ -4.5 degrees
+                    const angledPadding = fontSize * 0.3;
+                    const angledBgWidth = ctx.measureText(longestLine).width + angledPadding * 2;
+                    const angledBgHeight = totalTextHeight + angledPadding;
+                    ctx.fillStyle = state.textStrokeColor;
+                    ctx.fillRect(-angledBgWidth / 2, -angledBgHeight/2, angledBgWidth, angledBgHeight);
+                    lines.forEach((line, index) => {
+                        const yPos = - (totalTextHeight/2) + (lineHeight/2) + (index * lineHeight);
+                        ctx.fillStyle = state.textColor;
+                        ctx.fillText(line, 0, yPos);
+                    });
+                    break;
+            }
+            ctx.restore();
+        }
+
+        function drawImage(imageState, rect) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(rect.x, rect.y, rect.width, rect.height);
+            ctx.clip();
+            
+            if (imageState && imageState.img) {
+                const containerAspect = rect.width / rect.height;
+                const imageAspect = imageState.originalWidth / imageState.originalHeight;
+                const scale = containerAspect > imageAspect ? rect.width / imageState.originalWidth : rect.height / imageState.originalHeight;
+                
+                const scaledWidth = imageState.originalWidth * scale;
+                const scaledHeight = imageState.originalHeight * scale;
+
+                const centerX = rect.x + (rect.width - scaledWidth) / 2;
+                const centerY = rect.y + (rect.height - scaledHeight) / 2;
+
+                const drawX = centerX + (imageState.dx || 0);
+                const drawY = centerY + (imageState.dy || 0);
+
+                ctx.drawImage(imageState.img, drawX, drawY, scaledWidth, scaledHeight);
+            } else {
+                ctx.fillStyle = '#E5E7EB';
+                ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+                ctx.fillStyle = '#9CA3AF';
+                ctx.font = "bold 30px 'Poppins'";
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`SLOT`, rect.x + rect.width / 2, rect.y + rect.height / 2);
+            }
+            ctx.restore();
+        }
+
+        // --- Image Loading and Processing ---
+        function handleImageUpload(e) {
+            const files = e.target.files;
+            if (!files) return;
+            
+            state.images = []; // Clear old images
+            
+            for (let i = 0; i < files.length; i++) {
+                if (files[i]) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            state.images[i] = {
+                                img: img,
+                                originalWidth: img.width,
+                                originalHeight: img.height,
+                                dx: 0,
+                                dy: 0
+                            };
+                            drawCanvas();
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(files[i]);
+                }
+            }
+        }
+        
+        // --- Preferences ---
+        function savePreferences() {
+            const prefs = {
+                layout: state.layout,
+                fontFamily: state.fontFamily,
+                textColor: state.textColor,
+                textStrokeColor: state.textStrokeColor,
+                textDesign: state.textDesign,
+            };
+            localStorage.setItem('pinGenPrefs', JSON.stringify(prefs));
+            savePrefsBtn.classList.add('saved');
+            setTimeout(() => savePrefsBtn.classList.remove('saved'), 1500);
+        }
+
+        function loadPreferences() {
+            const savedPrefs = localStorage.getItem('pinGenPrefs');
+            if (savedPrefs) {
+                const prefs = JSON.parse(savedPrefs);
+                state = { ...state, ...prefs };
+                document.querySelector(`input[name="layout"][value="${state.layout}"]`).checked = true;
+                fontSelector.value = state.fontFamily;
+                textDesignSelector.value = state.textDesign;
+                textColorPicker.value = state.textColor;
+                strokeColorPicker.value = state.textStrokeColor;
+                document.querySelectorAll('#colorPalette button').forEach(btn => {
+                    btn.classList.remove('ring-2', 'ring-violet-500');
+                    if(btn.dataset.textColor === state.textColor) {
+                         btn.classList.add('ring-2', 'ring-violet-500');
+                    }
+                });
+            }
+        }
+
+        function updateColorState(textColor, strokeColor) {
+            state.textColor = textColor;
+            state.textStrokeColor = strokeColor;
+            textColorPicker.value = textColor;
+            strokeColorPicker.value = strokeColor;
+            document.querySelectorAll('#colorPalette button').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-violet-500');
+                if(btn.dataset.textColor === textColor) {
+                     btn.classList.add('ring-2', 'ring-violet-500');
+                }
+            });
+            drawCanvas();
+        }
+
+        // --- Event Listeners ---
+        imageInput.addEventListener('change', handleImageUpload);
+        pinTextInput.addEventListener('input', (e) => { state.text = e.target.value; drawCanvas(); });
+        fontSelector.addEventListener('change', (e) => { state.fontFamily = e.target.value; drawCanvas(); });
+        textDesignSelector.addEventListener('change', (e) => { state.textDesign = e.target.value; drawCanvas(); });
+        textColorPicker.addEventListener('input', (e) => updateColorState(e.target.value, state.textStrokeColor));
+        strokeColorPicker.addEventListener('input', (e) => updateColorState(state.textColor, e.target.value));
+
+        downloadButton.addEventListener('click', () => {
+            const link = document.createElement('a');
+            const filename = sanitizeFilename(state.text);
+            link.download = `${filename}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+        });
+        randomColorBtn.addEventListener('click', () => {
+            let textColor, strokeColor, contrast;
+            let attempts = 0;
+            
+            do {
+                textColor = generateRandomHexColor();
+                strokeColor = generateRandomHexColor();
+                contrast = getContrast(textColor, strokeColor);
+                attempts++;
+            } while (contrast < 4.5 && attempts < 100);
+
+            if (attempts >= 100) {
+                const randomPalette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
+                textColor = randomPalette.text;
+                strokeColor = randomPalette.stroke;
+            }
+            updateColorState(textColor, strokeColor);
+        });
+        layoutRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                state.layout = e.target.value;
+                drawCanvas();
+            });
+        });
+        savePrefsBtn.addEventListener('click', savePreferences);
+
+        // --- Drag and Drop Logic ---
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX, y = (e.clientY - rect.top) * scaleY;
+            const currentLayout = layouts[state.layout];
+            dragTargetIndex = currentLayout.findIndex(r => x > r.x && x < r.x + r.width && y > r.y && y < r.y + r.height);
+            if (dragTargetIndex !== -1 && state.images[dragTargetIndex]) {
+                isDragging = true;
+                startX = x;
+                startY = y;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging || dragTargetIndex === -1) return;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+            const currentX = (e.clientX - rect.left) * scaleX, currentY = (e.clientY - rect.top) * scaleY;
+            const dx = currentX - startX, dy = currentY - startY;
+            const imageState = state.images[dragTargetIndex];
+            const layoutRect = layouts[state.layout][dragTargetIndex];
+            
+            imageState.dx += dx;
+            imageState.dy += dy;
+
+            const containerAspect = layoutRect.width / layoutRect.height;
+            const imageAspect = imageState.originalWidth / imageState.originalHeight;
+            const scale = containerAspect > imageAspect ? layoutRect.width / imageState.originalWidth : layoutRect.height / imageState.originalHeight;
+            const scaledWidth = imageState.originalWidth * scale;
+            const scaledHeight = imageState.originalHeight * scale;
+            
+            const max_dx = Math.max(0, (scaledWidth - layoutRect.width) / 2);
+            const max_dy = Math.max(0, (scaledHeight - layoutRect.height) / 2);
+
+            imageState.dx = Math.max(-max_dx, Math.min(max_dx, imageState.dx));
+            imageState.dy = Math.max(-max_dy, Math.min(max_dy, imageState.dy));
+            
+            startX = currentX;
+            startY = currentY;
+            drawCanvas();
+        });
+
+        canvas.addEventListener('mouseup', () => { isDragging = false; dragTargetIndex = -1; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; dragTargetIndex = -1; });
+        
+        // --- Initialization ---
+        function initialize() {
+            fonts.forEach(font => {
+                const option = document.createElement('option');
+                option.value = font;
+                option.textContent = font;
+                fontSelector.appendChild(option);
+            });
+            colorPalettes.forEach((palette, index) => {
+                const swatch = document.createElement('button');
+                swatch.className = 'w-10 h-10 rounded-full border-2 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 transition-transform hover:scale-110';
+                swatch.style.backgroundColor = palette.text;
+                swatch.style.borderColor = palette.stroke;
+                swatch.dataset.textColor = palette.text;
+                if (index === 0) swatch.classList.add('ring-2', 'ring-violet-500');
+                swatch.addEventListener('click', () => {
+                    updateColorState(palette.text, palette.stroke);
+                });
+                colorPaletteContainer.appendChild(swatch);
+            });
+            
+            loadPreferences();
+            drawCanvas();
+        }
+
+        initialize();
+    </script>
+
+</body>
+</html>
