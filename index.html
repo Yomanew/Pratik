@@ -37,6 +37,25 @@
         .star-btn.saved {
             color: #FBBF24; /* yellow-400 */
         }
+        /* Custom Color Picker */
+        .color-picker-input {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            width: 40px;
+            height: 40px;
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        .color-picker-input::-webkit-color-swatch {
+            border-radius: 50%;
+            border: 2px solid #4B5563; /* gray-600 */
+        }
+        .color-picker-input::-moz-color-swatch {
+            border-radius: 50%;
+            border: 2px solid #4B5563; /* gray-600 */
+        }
     </style>
 </head>
 <body class="text-gray-200 min-h-screen flex items-center justify-center p-4">
@@ -97,6 +116,16 @@
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M3 16v-4h4"></path><path d="M21 8V4h-4"></path></svg>
                         </button>
                     </div>
+                     <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-xs font-bold mb-1" for="textColorPicker">Text</label>
+                            <input type="color" id="textColorPicker" class="color-picker-input">
+                        </div>
+                         <div>
+                            <label class="block text-xs font-bold mb-1" for="strokeColorPicker">Background</label>
+                            <input type="color" id="strokeColorPicker" class="color-picker-input">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Text Design Selector -->
@@ -142,6 +171,8 @@
         const textDesignSelector = document.getElementById('textDesignSelector');
         const layoutRadios = document.querySelectorAll('input[name="layout"]');
         const savePrefsBtn = document.getElementById('savePrefsBtn');
+        const textColorPicker = document.getElementById('textColorPicker');
+        const strokeColorPicker = document.getElementById('strokeColorPicker');
 
         // --- Configuration ---
         const CANVAS_WIDTH = 1000;
@@ -220,6 +251,37 @@
                 fontSize--;
             }
             return { lines, fontSize, longestLine: lines[0] || '' };
+        }
+        function hexToRgb(hex) {
+            let r = 0, g = 0, b = 0;
+            if (hex.length == 4) {
+                r = "0x" + hex[1] + hex[1];
+                g = "0x" + hex[2] + hex[2];
+                b = "0x" + hex[3] + hex[3];
+            } else if (hex.length == 7) {
+                r = "0x" + hex[1] + hex[2];
+                g = "0x" + hex[3] + hex[4];
+                b = "0x" + hex[5] + hex[6];
+            }
+            return [parseInt(r), parseInt(g), parseInt(b)];
+        }
+        function getLuminance(hex) {
+            const rgb = hexToRgb(hex);
+            const [r, g, b] = rgb.map(c => {
+                c /= 255;
+                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        }
+        function getContrast(hex1, hex2) {
+            const lum1 = getLuminance(hex1);
+            const lum2 = getLuminance(hex2);
+            const lighter = Math.max(lum1, lum2);
+            const darker = Math.min(lum1, lum2);
+            return (lighter + 0.05) / (darker + 0.05);
+        }
+        function generateRandomHexColor() {
+            return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
         }
         function sanitizeFilename(text) {
             if (!text) {
@@ -335,14 +397,18 @@
             ctx.clip();
             
             if (imageState && imageState.img) {
-                const scaledWidth = imageState.originalWidth * imageState.scale;
-                const scaledHeight = imageState.originalHeight * imageState.scale;
+                const containerAspect = rect.width / rect.height;
+                const imageAspect = imageState.originalWidth / imageState.originalHeight;
+                const scale = containerAspect > imageAspect ? rect.width / imageState.originalWidth : rect.height / imageState.originalHeight;
+                
+                const scaledWidth = imageState.originalWidth * scale;
+                const scaledHeight = imageState.originalHeight * scale;
 
                 const centerX = rect.x + (rect.width - scaledWidth) / 2;
                 const centerY = rect.y + (rect.height - scaledHeight) / 2;
 
-                const drawX = centerX + imageState.dx;
-                const drawY = centerY + imageState.dy;
+                const drawX = centerX + (imageState.dx || 0);
+                const drawY = centerY + (imageState.dy || 0);
 
                 ctx.drawImage(imageState.img, drawX, drawY, scaledWidth, scaledHeight);
             } else {
@@ -415,6 +481,8 @@
                 document.querySelector(`input[name="layout"][value="${state.layout}"]`).checked = true;
                 fontSelector.value = state.fontFamily;
                 textDesignSelector.value = state.textDesign;
+                textColorPicker.value = state.textColor;
+                strokeColorPicker.value = state.textStrokeColor;
                 document.querySelectorAll('#colorPalette button').forEach(btn => {
                     btn.classList.remove('ring-2', 'ring-violet-500');
                     if(btn.dataset.textColor === state.textColor) {
@@ -424,11 +492,28 @@
             }
         }
 
+        function updateColorState(textColor, strokeColor) {
+            state.textColor = textColor;
+            state.textStrokeColor = strokeColor;
+            textColorPicker.value = textColor;
+            strokeColorPicker.value = strokeColor;
+            document.querySelectorAll('#colorPalette button').forEach(btn => {
+                btn.classList.remove('ring-2', 'ring-violet-500');
+                if(btn.dataset.textColor === textColor) {
+                     btn.classList.add('ring-2', 'ring-violet-500');
+                }
+            });
+            drawCanvas();
+        }
+
         // --- Event Listeners ---
         imageInput.addEventListener('change', handleImageUpload);
         pinTextInput.addEventListener('input', (e) => { state.text = e.target.value; drawCanvas(); });
         fontSelector.addEventListener('change', (e) => { state.fontFamily = e.target.value; drawCanvas(); });
         textDesignSelector.addEventListener('change', (e) => { state.textDesign = e.target.value; drawCanvas(); });
+        textColorPicker.addEventListener('input', (e) => updateColorState(e.target.value, state.textStrokeColor));
+        strokeColorPicker.addEventListener('input', (e) => updateColorState(state.textColor, e.target.value));
+
         downloadButton.addEventListener('click', () => {
             const link = document.createElement('a');
             const filename = sanitizeFilename(state.text);
@@ -437,16 +522,22 @@
             link.click();
         });
         randomColorBtn.addEventListener('click', () => {
-            const randomPalette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
-            state.textColor = randomPalette.text;
-            state.textStrokeColor = randomPalette.stroke;
-            document.querySelectorAll('#colorPalette button').forEach(btn => {
-                btn.classList.remove('ring-2', 'ring-violet-500');
-                if(btn.dataset.textColor === state.textColor) {
-                     btn.classList.add('ring-2', 'ring-violet-500');
-                }
-            });
-            drawCanvas();
+            let textColor, strokeColor, contrast;
+            let attempts = 0;
+            
+            do {
+                textColor = generateRandomHexColor();
+                strokeColor = generateRandomHexColor();
+                contrast = getContrast(textColor, strokeColor);
+                attempts++;
+            } while (contrast < 4.5 && attempts < 100);
+
+            if (attempts >= 100) {
+                const randomPalette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
+                textColor = randomPalette.text;
+                strokeColor = randomPalette.stroke;
+            }
+            updateColorState(textColor, strokeColor);
         });
         layoutRadios.forEach(radio => {
             radio.addEventListener('change', (e) => {
@@ -482,8 +573,11 @@
             imageState.dx += dx;
             imageState.dy += dy;
 
-            const scaledWidth = imageState.originalWidth * imageState.scale;
-            const scaledHeight = imageState.originalHeight * imageState.scale;
+            const containerAspect = layoutRect.width / layoutRect.height;
+            const imageAspect = imageState.originalWidth / imageState.originalHeight;
+            const scale = containerAspect > imageAspect ? layoutRect.width / imageState.originalWidth : layoutRect.height / imageState.originalHeight;
+            const scaledWidth = imageState.originalWidth * scale;
+            const scaledHeight = imageState.originalHeight * scale;
             
             const max_dx = Math.max(0, (scaledWidth - layoutRect.width) / 2);
             const max_dy = Math.max(0, (scaledHeight - layoutRect.height) / 2);
@@ -537,11 +631,7 @@
                 swatch.dataset.textColor = palette.text;
                 if (index === 0) swatch.classList.add('ring-2', 'ring-violet-500');
                 swatch.addEventListener('click', () => {
-                    state.textColor = palette.text;
-                    state.textStrokeColor = palette.stroke;
-                    document.querySelectorAll('#colorPalette button').forEach(btn => btn.classList.remove('ring-2', 'ring-violet-500'));
-                    swatch.classList.add('ring-2', 'ring-violet-500');
-                    drawCanvas();
+                    updateColorState(palette.text, palette.stroke);
                 });
                 colorPaletteContainer.appendChild(swatch);
             });
