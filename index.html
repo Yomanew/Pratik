@@ -397,12 +397,8 @@
             ctx.clip();
             
             if (imageState && imageState.img) {
-                const containerAspect = rect.width / rect.height;
-                const imageAspect = imageState.originalWidth / imageState.originalHeight;
-                const scale = containerAspect > imageAspect ? rect.width / imageState.originalWidth : rect.height / imageState.originalHeight;
-                
-                const scaledWidth = imageState.originalWidth * scale;
-                const scaledHeight = imageState.originalHeight * scale;
+                const scaledWidth = imageState.originalWidth * imageState.scale;
+                const scaledHeight = imageState.originalHeight * imageState.scale;
 
                 const centerX = rect.x + (rect.width - scaledWidth) / 2;
                 const centerY = rect.y + (rect.height - scaledHeight) / 2;
@@ -573,11 +569,8 @@
             imageState.dx += dx;
             imageState.dy += dy;
 
-            const containerAspect = layoutRect.width / layoutRect.height;
-            const imageAspect = imageState.originalWidth / imageState.originalHeight;
-            const scale = containerAspect > imageAspect ? layoutRect.width / imageState.originalWidth : layoutRect.height / imageState.originalHeight;
-            const scaledWidth = imageState.originalWidth * scale;
-            const scaledHeight = imageState.originalHeight * scale;
+            const scaledWidth = imageState.originalWidth * imageState.scale;
+            const scaledHeight = imageState.originalHeight * imageState.scale;
             
             const max_dx = Math.max(0, (scaledWidth - layoutRect.width) / 2);
             const max_dy = Math.max(0, (scaledHeight - layoutRect.height) / 2);
